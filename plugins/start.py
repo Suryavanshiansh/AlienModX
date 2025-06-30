@@ -2,21 +2,18 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 
 @Client.on_message(filters.command("start"))
-async def start_handler(client, message: Message):
-    await message.reply_text(
-        f"👋 Hello {message.from_user.first_name}!\n\n"
-        "I'm ALienModX — your powerful Telegram moderator bot.\n"
-        "Use /help to see available commands."
-    )
+async def start_msg(client: Client, message: Message):
+    await message.reply("👋 Hello! I’m AlienModX. Type /help to get started.")
 
 @Client.on_message(filters.command("help"))
-async def help_handler(client, message: Message):
-    await message.reply_text(
-        "🛠️ Available Commands:\n"
-        "/warn - Warn a user\n"
-        "/resetwarns - Reset user's warnings\n"
-        "/antilink [on/off] - Enable/disable anti-link\n"
-        "/ban - Ban user\n"
-        "/mute - Mute user\n"
-        "/kick - Kick user"
-    )
+async def help_msg(client: Client, message: Message):
+    text = """
+🛠️ Commands:
+/addbad, /removebad, /badwords
+/addflood, /removeflood, /floodwords
+/ban, /kick, /mute, /unmute
+/lock, /unlock
+/warn, /resetwarns
+/rules, /schedule, /verify
+"""
+    await message.reply(text.strip())
