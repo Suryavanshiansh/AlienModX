@@ -1,10 +1,9 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from config import OWNER_ID
+from datetime import timedelta
 
-# In-memory warn tracking (use database for production)
+# In-memory warn tracking (use a database for production)
 warn_db = {}
-
 WARN_LIMIT = 3
 
 @Client.on_message(filters.command("warn") & filters.group)
@@ -20,9 +19,16 @@ async def warn_user(client, message: Message):
     warns = warn_db[key]
 
     if warns >= WARN_LIMIT:
-        await message.chat.ban_member(user_id)
-        warn_db[key] = 0
-        await message.reply(f"❌ User banned after {WARN_LIMIT} warnings.")
+        try:
+            await client.restrict_chat_member(
+                chat_id,
+                user_id,
+                permissions=message.chat.permissions,  # Apply default permissions = mute
+                until_date=timedelta(minutes=30)
+            )
+            await message.reply(f"🔇 User muted for 30 minutes after {WARN_LIMIT} warnings.")
+        except Exception as e:
+            await message.reply(f"❌ Could not mute the user: {e}")
     else:
         await message.reply(f"⚠️ Warning {warns}/{WARN_LIMIT} issued.")
 
@@ -30,10 +36,21 @@ async def warn_user(client, message: Message):
 async def reset_warns(client, message: Message):
     if not message.reply_to_message:
         return await message.reply("🔁 Reply to a user to reset their warnings.")
-    
+
     user_id = message.reply_to_message.from_user.id
     chat_id = message.chat.id
     key = f"{chat_id}:{user_id}"
     warn_db[key] = 0
     await message.reply("✅ Warnings reset.")
 
+@Client.on_message(filters.command("ban") & filters.group)
+async def ban_user(client, message: Message):
+    if not message.reply_to_message:
+        return await message.reply("❌ Reply to a user to ban them.")
+
+    user_id = message.reply_to_message.from_user.id
+    try:
+        await client.ban_chat_member(message.chat.id, user_id)
+        await message.reply("🚫 User has been banned manually by admin.")
+    except Exception as e:
+        await message.reply(f"❌ Failed to ban user: {e}")
