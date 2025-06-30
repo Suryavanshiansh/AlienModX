@@ -1,14 +1,16 @@
-# 🚀 main.py - Auto Moderation Rental Bot
 import asyncio
 import logging
 from pyrogram import Client, idle
 from config import API_ID, API_HASH, BOT_TOKEN, SESSION_NAME
 
-# 🔧 Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("🔥 RentalBot")
+# 🛠️ Setup Colorful Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="\033[1;32m[%(levelname)s]\033[0m %(message)s"
+)
+logger = logging.getLogger("💎 SupremeRentalBot")
 
-# 🤖 Bot Client Setup
+# 🤖 Bot Client with Plugin Magic
 app = Client(
     SESSION_NAME,
     api_id=API_ID,
@@ -17,15 +19,14 @@ app = Client(
     plugins={"root": "plugins"}
 )
 
-# 🌀 Main Function
+# 🚦 Entry Function with Swag
 async def main():
     await app.start()
-    logger.info("✅ Bot has started and is ready to rock!")
+    logger.info("🎯 Bot is online and moderating like a boss!")
     await idle()
     await app.stop()
-    logger.info("🛑 Bot has been stopped. Goodbye!")
+    logger.info("👋 Bot session ended. Peace out!")
 
-# 🧠 Entry Point
+# 🧠 Start the Show
 if __name__ == "__main__":
     asyncio.run(main())
-
