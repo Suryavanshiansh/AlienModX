@@ -32,8 +32,12 @@ async def warn_user(client, message: Message):
     else:
         await message.reply(f"⚠️ Warning {warns}/{WARN_LIMIT} issued.")
 
-@Client.on_message(filters.command("resetwarns") & filters.group)
+@Client.on_message(filters.command("resetwarns") & filters.group & filters.user)
 async def reset_warns(client, message: Message):
+    member = await client.get_chat_member(message.chat.id, message.from_user.id)
+    if not (member.status in ("administrator", "creator")):
+        return await message.reply("❌ Only admins or the group owner can reset warnings.")
+
     if not message.reply_to_message:
         return await message.reply("🔁 Reply to a user to reset their warnings.")
 
@@ -54,3 +58,4 @@ async def ban_user(client, message: Message):
         await message.reply("🚫 User has been banned manually by admin.")
     except Exception as e:
         await message.reply(f"❌ Failed to ban user: {e}")
+
