@@ -1,19 +1,28 @@
-# database/word_manager.py
+# database/warn_manager.py
 
-from .mongo import db
+from pymongo import MongoClient
+from datetime import datetime
 
-badwords_col = db["badwords"]
-flood_col = db["floodwords"]
+MONGO_URI = "your_mongo_connection_string"  # replace with config import
+client = MongoClient(MONGO_URI)
+db = client["alienmodx"]
+warns = db["warns"]
 
-def add_word(chat_id: int, word: str, word_type: str):
-    col = badwords_col if word_type == "bad" else flood_col
-    if not col.find_one({"chat_id": chat_id, "word": word}):
-        col.insert_one({"chat_id": chat_id, "word": word})
+# ➕ Add a warning
+async def add_warn(chat_id, user_id):
+    user = warns.find_one({"chat_id": chat_id, "user_id": user_id})
+    if user:
+        warns.update_one({"chat_id": chat_id, "user_id": user_id}, {"$inc": {"warns": 1}})
+        return user["warns"] + 1
+    else:
+        warns.insert_one({"chat_id": chat_id, "user_id": user_id, "warns": 1})
+        return 1
 
-def remove_word(chat_id: int, word: str, word_type: str):
-    col = badwords_col if word_type == "bad" else flood_col
-    col.delete_one({"chat_id": chat_id, "word": word})
+# 📊 Get warnings
+async def get_warns(chat_id, user_id):
+    user = warns.find_one({"chat_id": chat_id, "user_id": user_id})
+    return user["warns"] if user else 0
 
-def get_words(chat_id: int, word_type: str):
-    col = badwords_col if word_type == "bad" else flood_col
-    return [x["word"] for x in col.find({"chat_id": chat_id})]
+# ❌ Reset warnings
+async def reset_warns(chat_id, user_id):
+    warns.delete_one({"chat_id": chat_id, "user_id": user_id})
