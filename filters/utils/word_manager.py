@@ -1,54 +1,68 @@
-# 📁 filters/utils/word_manager.py
-import json
-import os
+from pyrogram import Client, filters
+from pyrogram.types import Message
+from filters.utils.admin_check import is_admin
+from config import OWNER_ID
+from database.mongo import get_words, add_word, remove_word
 
-# 📂 Path to word database
-data_dir = "data"
-os.makedirs(data_dir, exist_ok=True)
-BANWORDS_PATH = os.path.join(data_dir, "banned_words.json")
+# 🔐 Only Admins & Owner Allowed
+admin_only = filters.group & (filters.user(OWNER_ID) | filters.create(is_admin))
 
-# ✅ Load banned words from JSON
-def load_banned_words():
-    if not os.path.exists(BANWORDS_PATH):
-        with open(BANWORDS_PATH, "w") as f:
-            json.dump({}, f)
-    with open(BANWORDS_PATH, "r") as f:
-        return json.load(f)
+# 🧩 Command Prefix
+@Client.on_message(filters.command("addbadword") & admin_only)
+async def add_badword(client, message: Message):
+    if len(message.command) < 2:
+        return await message.reply("⚠️ Usage: /addbadword <word>")
+    word = message.command[1].lower()
+    added = await add_word(message.chat.id, word, "banned_words")
+    if added:
+        await message.reply(f"✅ Added bad word: `{word}`")
+    else:
+        await message.reply("❗ Word already exists.")
 
-# 💾 Save banned words to JSON
-def save_banned_words(data):
-    with open(BANWORDS_PATH, "w") as f:
-        json.dump(data, f, indent=2)
+@Client.on_message(filters.command("removebadword") & admin_only)
+async def remove_badword(client, message: Message):
+    if len(message.command) < 2:
+        return await message.reply("⚠️ Usage: /removebadword <word>")
+    word = message.command[1].lower()
+    removed = await remove_word(message.chat.id, word, "banned_words")
+    if removed:
+        await message.reply(f"🗑️ Removed bad word: `{word}`")
+    else:
+        await message.reply("❗ Word not found.")
 
-# ➕ Add a banned word to a group
-def add_word(chat_id: int, word: str):
-    words = load_banned_words()
-    chat_id = str(chat_id)
-    words.setdefault(chat_id, [])
-    if word not in words[chat_id]:
-        words[chat_id].append(word)
-        save_banned_words(words)
-        return True
-    return False
+@Client.on_message(filters.command("listbadwords") & admin_only)
+async def list_badwords(client, message: Message):
+    words = await get_words(message.chat.id, "banned_words")
+    if not words:
+        return await message.reply("✅ No bad words set.")
+    await message.reply("🚫 Banned Words:\n" + ", ".join(words))
 
-# ❌ Remove a banned word from a group
-def remove_word(chat_id: int, word: str):
-    words = load_banned_words()
-    chat_id = str(chat_id)
-    if chat_id in words and word in words[chat_id]:
-        words[chat_id].remove(word)
-        save_banned_words(words)
-        return True
-    return False
+# 🔁 Flood words management
+@Client.on_message(filters.command("addflood") & admin_only)
+async def add_floodword(client, message: Message):
+    if len(message.command) < 2:
+        return await message.reply("⚠️ Usage: /addflood <word>")
+    word = message.command[1].lower()
+    added = await add_word(message.chat.id, word, "flood_words")
+    if added:
+        await message.reply(f"✅ Added flood word: `{word}`")
+    else:
+        await message.reply("❗ Word already exists.")
 
-# 📜 Get all banned words for a group
-def get_words(chat_id: int):
-    words = load_banned_words()
-    return words.get(str(chat_id), [])
+@Client.on_message(filters.command("removeflood") & admin_only)
+async def remove_floodword(client, message: Message):
+    if len(message.command) < 2:
+        return await message.reply("⚠️ Usage: /removeflood <word>")
+    word = message.command[1].lower()
+    removed = await remove_word(message.chat.id, word, "flood_words")
+    if removed:
+        await message.reply(f"🗑️ Removed flood word: `{word}`")
+    else:
+        await message.reply("❗ Word not found.")
 
-# 🔍 Check if text contains banned word
-def contains_banned_word(chat_id: int, text: str):
-    banned = get_words(chat_id)
-    text = text.lower()
-    return any(word.lower() in text for word in banned)
-
+@Client.on_message(filters.command("listfloodwords") & admin_only)
+async def list_floodwords(client, message: Message):
+    words = await get_words(message.chat.id, "flood_words")
+    if not words:
+        return await message.reply("✅ No flood words set.")
+    await message.reply("💬 Flood Trigger Words:\n" + ", ".join(words))
