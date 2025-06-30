@@ -8,7 +8,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="\033[1;32m[%(levelname)s]\033[0m %(message)s"
 )
-logger = logging.getLogger("💎 SupremeRentalBot")
+logger = logging.getLogger("💎 ALienModX")
 
 # 🤖 Bot Client with Plugin Magic
 app = Client(
