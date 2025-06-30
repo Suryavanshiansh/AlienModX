@@ -2,35 +2,44 @@ import asyncio
 import logging
 from pyrogram import Client, idle
 from config import API_ID, API_HASH, BOT_TOKEN, SESSION_NAME
+from database.mongo import connect_to_mongo
 
-# 🛠️ Setup Colorful Logging
+# 🛠️ Colorful Logging Setup
 logging.basicConfig(
     level=logging.INFO,
     format="\033[1;32m[%(levelname)s]\033[0m %(message)s"
 )
-logger = logging.getLogger("💎 ALienModX")
+logger = logging.getLogger("💎 AlienModX")
 
-# 🤖 Bot Client with Plugin Magic
+# 🚀 Pyrogram Client with Plugin Autoload
 app = Client(
-    name=SESSION_NAME,
+    SESSION_NAME,
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
-    plugins=dict(root="plugins")
+    plugins={"root": "plugins"}
 )
 
-# 🚦 Entry Function
+# 🧠 Main entry point
 async def main():
-    try:
-        await app.start()
-        logger.info("🎯 Bot is online and moderating like a boss!")
-        await idle()
-    except Exception as e:
-        logger.error(f"❌ Bot crashed with error: {e}")
-    finally:
-        await app.stop()
-        logger.info("👋 Bot session ended. Peace out!")
+    # 📡 Connect to MongoDB
+    await connect_to_mongo()
 
-# 🧠 Start the Show
+    # ✅ Start the bot
+    await app.start()
+    me = await app.get_me()
+    logger.info(f"🤖 Bot @{me.username} started successfully!")
+
+    # 💤 Wait for idle
+    await idle()
+
+    # ❎ Stop the bot
+    await app.stop()
+    logger.info("👋 Bot stopped gracefully!")
+
+# 🧩 Run the bot
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("⚠️ Bot interrupted manually.")
