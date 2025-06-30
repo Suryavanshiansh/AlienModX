@@ -12,20 +12,24 @@ logger = logging.getLogger("💎 ALienModX")
 
 # 🤖 Bot Client with Plugin Magic
 app = Client(
-    SESSION_NAME,
+    name=SESSION_NAME,
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
-    plugins={"root": "plugins"}
+    plugins=dict(root="plugins")
 )
 
-# 🚦 Entry Function with Swag
+# 🚦 Entry Function
 async def main():
-    await app.start()
-    logger.info("🎯 Bot is online and moderating like a boss!")
-    await idle()
-    await app.stop()
-    logger.info("👋 Bot session ended. Peace out!")
+    try:
+        await app.start()
+        logger.info("🎯 Bot is online and moderating like a boss!")
+        await idle()
+    except Exception as e:
+        logger.error(f"❌ Bot crashed with error: {e}")
+    finally:
+        await app.stop()
+        logger.info("👋 Bot session ended. Peace out!")
 
 # 🧠 Start the Show
 if __name__ == "__main__":
