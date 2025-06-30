@@ -1,61 +1,42 @@
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from datetime import timedelta
+from filters.utils.admin_check import is_admin
+from database.warn_manager import add_warn, reset_warns
+from datetime import datetime, timedelta
+from config import OWNER_ID
 
-# In-memory warn tracking (use a database for production)
-warn_db = {}
-WARN_LIMIT = 3
+# Admin-only filter
+admin_filter = filters.group & (filters.create(is_admin) | filters.user(OWNER_ID))
 
-@Client.on_message(filters.command("warn") & filters.group)
-async def warn_user(client, message: Message):
+@Client.on_message(filters.command("warn") & admin_filter)
+async def warn_user_cmd(client: Client, message: Message):
     if not message.reply_to_message:
-        return await message.reply("⚠️ Reply to a user's message to warn them.")
-
-    user_id = message.reply_to_message.from_user.id
+        return await message.reply("❌ Please reply to the user you want to warn.")
+    user = message.reply_to_message.from_user.id
     chat_id = message.chat.id
 
-    key = f"{chat_id}:{user_id}"
-    warn_db[key] = warn_db.get(key, 0) + 1
-    warns = warn_db[key]
+    count = await add_warn(chat_id, user)
 
-    if warns >= WARN_LIMIT:
+    if count >= 3:
+        until_date = datetime.utcnow() + timedelta(minutes=30)
         try:
             await client.restrict_chat_member(
                 chat_id,
-                user_id,
-                permissions=message.chat.permissions,  # Apply default permissions = mute
-                until_date=timedelta(minutes=30)
+                user,
+                permissions=ChatPermissions(),  # no permissions
+                until_date=until_date
             )
-            await message.reply(f"🔇 User muted for 30 minutes after {WARN_LIMIT} warnings.")
+            await message.reply(f"🚫 User reached 3 warnings — muted for 30 minutes.")
         except Exception as e:
-            await message.reply(f"❌ Could not mute the user: {e}")
+            await message.reply(f"❌ Failed to mute user: {e}")
     else:
-        await message.reply(f"⚠️ Warning {warns}/{WARN_LIMIT} issued.")
+        await message.reply(f"⚠️ Warn issued. This user now has {count}/3 warnings.")
 
-@Client.on_message(filters.command("resetwarns") & filters.group & filters.user)
-async def reset_warns(client, message: Message):
-    member = await client.get_chat_member(message.chat.id, message.from_user.id)
-    if not (member.status in ("administrator", "creator")):
-        return await message.reply("❌ Only admins or the group owner can reset warnings.")
-
+@Client.on_message(filters.command("resetwarns") & admin_filter)
+async def reset_warns_cmd(client: Client, message: Message):
     if not message.reply_to_message:
-        return await message.reply("🔁 Reply to a user to reset their warnings.")
-
-    user_id = message.reply_to_message.from_user.id
+        return await message.reply("❌ Please reply to the user whose warnings you want to reset.")
+    user = message.reply_to_message.from_user.id
     chat_id = message.chat.id
-    key = f"{chat_id}:{user_id}"
-    warn_db[key] = 0
-    await message.reply("✅ Warnings reset.")
-
-@Client.on_message(filters.command("ban") & filters.group)
-async def ban_user(client, message: Message):
-    if not message.reply_to_message:
-        return await message.reply("❌ Reply to a user to ban them.")
-
-    user_id = message.reply_to_message.from_user.id
-    try:
-        await client.ban_chat_member(message.chat.id, user_id)
-        await message.reply("🚫 User has been banned manually by admin.")
-    except Exception as e:
-        await message.reply(f"❌ Failed to ban user: {e}")
-
+    await reset_warns(chat_id, user)
+    await message.reply("✅ Warnings reset for this user.")
